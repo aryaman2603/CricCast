@@ -1,0 +1,10 @@
+pandas
+numpy
+tqdm
+xgboost
+scikit-learn
+mlflow
+dvc
+pyyaml
+jupyter
+seaborn

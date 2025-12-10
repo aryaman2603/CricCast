@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.ipynb_checkpoints/
+
+# Virtual Environment
+venv/
+env/
+.env
+
+# Data (NEVER push data to git)
+data/
+artifacts/
+
+# VS Code settings
+.vscode/
+
+# DVC (We track the .dvc files, not the cache)
+.dvc/cache
+.dvc/tmp
