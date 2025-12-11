@@ -1,7 +1,7 @@
 import os
 import json
 import pandas as pd
-from tqdm import tqdm  # pip install tqdm
+from tqdm import tqdm
 
 class DataIngestion:
     def __init__(self, raw_data_path, output_path):
@@ -13,6 +13,59 @@ class DataIngestion:
             'batter', 'bowler', 'runs_off_bat', 'extras', 'total_runs', 
             'is_wicket', 'is_wide', 'is_noball', 'is_legal'
         ]
+
+    def _normalize_teams(self, df):
+        """Standardizes IPL team names to their modern equivalents."""
+        team_map = {
+            # Modern Rebrands
+            'Delhi Daredevils': 'Delhi Capitals',
+            'Kings XI Punjab': 'Punjab Kings',
+            'Royal Challengers Bangalore': 'Royal Challengers Bengaluru',
+            'Rising Pune Supergiant': 'Rising Pune Supergiants', # Normalize spelling
+            
+            # Franchise Continuity (Optional - Use caution here)
+            # 'Deccan Chargers': 'Sunrisers Hyderabad', # Usually treated as same legacy
+            # 'Pune Warriors': 'Rising Pune Supergiants' # Different owners, maybe keep separate?
+            # For now, let's keep defunct teams distinct unless they are direct rebrands
+        }
+        df['batting_team'] = df['batting_team'].replace(team_map)
+        df['bowling_team'] = df['bowling_team'].replace(team_map)
+        return df
+
+    def _normalize_venues(self, df):
+        """Merges duplicate venue names and handles renames."""
+        venue_map = {
+            # --- Format Fixes (Removing City Names) ---
+            'Arun Jaitley Stadium, Delhi': 'Arun Jaitley Stadium',
+            'Brabourne Stadium, Mumbai': 'Brabourne Stadium',
+            'Dr DY Patil Sports Academy, Mumbai': 'Dr DY Patil Sports Academy',
+            'Dr. Y.S. Rajasekhara Reddy ACA-VDCA Cricket Stadium, Visakhapatnam': 'Dr. Y.S. Rajasekhara Reddy ACA-VDCA Cricket Stadium',
+            'Eden Gardens, Kolkata': 'Eden Gardens',
+            'Himachal Pradesh Cricket Association Stadium, Dharamsala': 'Himachal Pradesh Cricket Association Stadium',
+            'M Chinnaswamy Stadium, Bengaluru': 'M. Chinnaswamy Stadium',
+            'M Chinnaswamy Stadium': 'M. Chinnaswamy Stadium', # Normalize dot
+            'MA Chidambaram Stadium, Chepauk': 'MA Chidambaram Stadium',
+            'MA Chidambaram Stadium, Chepauk, Chennai': 'MA Chidambaram Stadium',
+            'Maharashtra Cricket Association Stadium, Pune': 'Maharashtra Cricket Association Stadium',
+            'Maharaja Yadavindra Singh International Cricket Stadium, New Chandigarh': 'Maharaja Yadavindra Singh International Cricket Stadium, Mullanpur',
+            'Punjab Cricket Association IS Bindra Stadium, Mohali': 'Punjab Cricket Association IS Bindra Stadium',
+            'Punjab Cricket Association IS Bindra Stadium, Mohali, Chandigarh': 'Punjab Cricket Association IS Bindra Stadium',
+            'Punjab Cricket Association Stadium, Mohali': 'Punjab Cricket Association IS Bindra Stadium', # Old name mapped to new
+            'Rajiv Gandhi International Stadium, Uppal': 'Rajiv Gandhi International Stadium',
+            'Rajiv Gandhi International Stadium, Uppal, Hyderabad': 'Rajiv Gandhi International Stadium',
+            'Sawai Mansingh Stadium, Jaipur': 'Sawai Mansingh Stadium',
+            'Wankhede Stadium, Mumbai': 'Wankhede Stadium',
+            'Zayed Cricket Stadium, Abu Dhabi': 'Sheikh Zayed Stadium',
+            
+            # --- Historic Renames ---
+            'Feroz Shah Kotla': 'Arun Jaitley Stadium',
+            'Sardar Patel Stadium, Motera': 'Narendra Modi Stadium',
+            'Narendra Modi Stadium, Ahmedabad': 'Narendra Modi Stadium',
+            'Subrata Roy Sahara Stadium': 'Maharashtra Cricket Association Stadium',
+            'Vidarbha Cricket Association Stadium, Jamtha': 'Vidarbha Cricket Association Stadium',
+        }
+        df['venue'] = df['venue'].replace(venue_map)
+        return df
 
     def parse_match(self, file_path):
         with open(file_path, 'r') as f:
@@ -34,27 +87,17 @@ class DataIngestion:
                 team_bowling = teams[1] if teams[0] == team_batting else teams[0]
 
             for over_data in innings_data.get('overs', []):
-                over_num = over_data['over'] # 0-indexed (0, 1, 2...)
-                
-                # USER LOGIC: Over is 1-based (1, 2, 3...)
+                over_num = over_data['over'] # 0-indexed
                 over_display = over_num + 1
-                
-                # USER LOGIC: Ball counter restarts every over
                 ball_counter = 1
                 
                 for delivery_idx, delivery in enumerate(over_data['deliveries']):
-                    # Check for Extras FIRST
                     extras_data = delivery.get('extras', {})
                     is_wide = 1 if 'wides' in extras_data else 0
                     is_noball = 1 if 'noballs' in extras_data else 0
                     is_legal = 1 if (is_wide == 0 and is_noball == 0) else 0
 
-                    # Calculate Ball Number (e.g., 0.1, 0.2)
-                    # Note: We use the over_num (0-indexed) for the prefix 
-                    # so Over 1 starts with 0.1, Over 20 starts with 19.1
                     ball_display = over_num + (ball_counter / 10.0)
-
-                    # Extract Runs
                     runs = delivery.get('runs', {})
                     
                     row = {
@@ -64,8 +107,8 @@ class DataIngestion:
                         'batting_team': team_batting,
                         'bowling_team': team_bowling,
                         'innings': innings_idx + 1,
-                        'over': over_display,    # 1, 2, ... 20
-                        'ball': ball_display,    # 0.1, 0.1 (wide), 0.2
+                        'over': over_display,
+                        'ball': ball_display,
                         'batter': delivery['batter'],
                         'bowler': delivery['bowler'],
                         'runs_off_bat': runs.get('batter', 0),
@@ -78,7 +121,6 @@ class DataIngestion:
                     }
                     all_deliveries.append(row)
                     
-                    # USER LOGIC: Only increment the counter if it was a LEGAL delivery
                     if is_legal:
                         ball_counter += 1
                     
@@ -86,17 +128,14 @@ class DataIngestion:
 
     def run(self):
         all_rows = []
-        # Get list of all .json files
         if not os.path.exists(self.raw_data_path):
             print(f"Error: The folder {self.raw_data_path} does not exist.")
             return
 
         json_files = [f for f in os.listdir(self.raw_data_path) if f.endswith('.json')]
-        
-        print(f"Found {len(json_files)} matches in {self.raw_data_path}. Starting ingestion...")
+        print(f"Found {len(json_files)} matches. Parsing...")
 
-        # Process files with a Progress Bar
-        for file_name in tqdm(json_files, desc="Parsing Matches"):
+        for file_name in tqdm(json_files):
             file_path = os.path.join(self.raw_data_path, file_name)
             try:
                 match_data = self.parse_match(file_path)
@@ -104,21 +143,18 @@ class DataIngestion:
             except Exception as e:
                 print(f"Skipping {file_name}: {e}")
 
-        # Create DataFrame
-        print("Converting to DataFrame...")
         df = pd.DataFrame(all_rows, columns=self.columns)
         
-        # Save to CSV
+        # --- CLEANING STEP ---
+        print("Normalizing Team and Venue names...")
+        df = self._normalize_teams(df)
+        df = self._normalize_venues(df)
+        
         os.makedirs(os.path.dirname(self.output_path), exist_ok=True)
         df.to_csv(self.output_path, index=False)
-        
-        print(f"✅ Success! Ingestion complete.")
-        print(f"Data saved to: {self.output_path}")
-        print(f"Total Balls Processed: {df.shape[0]}")
-        print(f"Total Matches Processed: {df['match_id'].nunique()}")
+        print(f"✅ Ingestion Complete. Data saved to {self.output_path}")
 
 if __name__ == "__main__":
-    # Configure paths relative to the project root
     ingestion = DataIngestion(
         raw_data_path='data/raw_json', 
         output_path='data/interim/match_data.csv'
