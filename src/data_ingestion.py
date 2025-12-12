@@ -43,7 +43,8 @@ class DataIngestion:
             'Eden Gardens, Kolkata': 'Eden Gardens',
             'Himachal Pradesh Cricket Association Stadium, Dharamsala': 'Himachal Pradesh Cricket Association Stadium',
             'M Chinnaswamy Stadium, Bengaluru': 'M. Chinnaswamy Stadium',
-            'M Chinnaswamy Stadium': 'M. Chinnaswamy Stadium', # Normalize dot
+            'M Chinnaswamy Stadium': 'M. Chinnaswamy Stadium',
+            'M.Chinnaswamy Stadium': 'M. Chinnaswamy Stadium',
             'MA Chidambaram Stadium, Chepauk': 'MA Chidambaram Stadium',
             'MA Chidambaram Stadium, Chepauk, Chennai': 'MA Chidambaram Stadium',
             'Maharashtra Cricket Association Stadium, Pune': 'Maharashtra Cricket Association Stadium',
