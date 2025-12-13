@@ -8,3 +8,5 @@ dvc
 pyyaml
 jupyter
 seaborn
+uvicorn
+fastapi

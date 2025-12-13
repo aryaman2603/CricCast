@@ -4,6 +4,7 @@ import pickle
 import mlflow
 import mlflow.sklearn
 import xgboost as xgb
+import sklearn
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
@@ -71,6 +72,8 @@ class ModelTrainer:
             mlflow.log_metric("mae", mae)
             mlflow.log_metric("r2", r2)
             mlflow.log_param("n_estimators", 500)
+
+            print(f"🔎 TRAINER is using Scikit-Learn version: {sklearn.__version__}")
             
             # Save the pipeline locally for the API
             os.makedirs("artifacts", exist_ok=True)
