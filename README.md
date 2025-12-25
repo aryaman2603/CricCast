@@ -47,12 +47,52 @@ The easiest way to run the application is using the pre-built Docker container.
 ```bash
 git clone [https://github.com/aryaman2603/criccast.git](https://github.com/aryaman2603/criccast.git)
 cd criccast
+```
 
 **2. Build the image**
 ```bash
 docker build -t criccast:v1
+```
 
 **3. Run the container**
 ```bash
 docker run -p 8000:8000 criccast:v1
+```
 
+## 🧪 Sample API Request
+Send a POST request to the `/predict` endpoint:
+
+```json
+{
+  "venue": "Wankhede Stadium",
+  "batting_team": "Mumbai Indians",
+  "bowling_team": "Chennai Super Kings",
+  "innings": 1,
+  "ball": 15.2,
+  "current_score": 145,
+  "wickets_fallen": 3,
+  "runs_last_5": 42,
+  "wickets_last_5": 1
+}
+```
+
+**Response:**
+```json
+{
+  "predicted_score": 198
+}
+```
+## 📂 Project Structure
+```text
+criccast/
+├── .github/workflows/   # CI/CD Pipeline Configuration
+├── artifacts/           # Trained Model (model.pkl)
+├── data/                # Raw and Processed Datasets
+├── src/
+│   ├── train.py         # Model Training Script
+│   └── preprocess.py    # ETL & Feature Engineering Logic
+├── app.py               # FastAPI Server Application
+├── Dockerfile           # Docker Build Instructions
+├── requirements.txt     # Python Dependencies
+└── README.md            # Project Documentation
+```
