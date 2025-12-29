@@ -1,13 +1,25 @@
 import pandas as pd
-import pickle
+import joblib
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import sklearn
-
+from huggingface_hub import hf_hub_download
 app = FastAPI(title="Cricket Score Prediction API")
 print(f"🔎 API SERVER is using Scikit-Learn version: {sklearn.__version__}")
-with open("artifacts/model.pkl", "rb") as f:
-    model_pipeline = pickle.load(f)
+
+REPO_ID = "aryaman2603/criccast-xgboost"
+FILENAME = "model.pkl"
+try:
+    print(f" Downloading model from Hugging Face: {REPO_ID}...")
+    model_path = hf_hub_download(repo_id=REPO_ID, filename=FILENAME)
+    print(f" Model downloaded to: {model_path}")
+
+    with open(model_path, "rb") as f:
+        model_pipeline = joblib.load(f)
+        
+except Exception as e:
+    print(f" Failed to load model: {e}")
+    raise e
 
 class MatchInput(BaseModel):
     venue: str
